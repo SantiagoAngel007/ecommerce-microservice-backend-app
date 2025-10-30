@@ -30,6 +30,15 @@ spring:
   #  baseline-on-migrate: true
   #  enabled: true
 
+eureka:
+  client:
+    enabled: true
+    serviceUrl:
+      defaultZone: http://service-discovery:8761/eureka/
+  instance:
+    hostname: user-service
+    prefer-ip-address: false
+
 logging:
   level:
     org:
