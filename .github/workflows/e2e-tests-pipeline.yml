@@ -1,0 +1,108 @@
+name: E2E Tests Pipeline
+
+on:
+  push:
+    branches: [ master, develop, stage ]
+  pull_request:
+    branches: [ master, develop, stage ]
+  workflow_dispatch:
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ecommerce
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+        ports:
+          - 3306:3306
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          cache: maven
+
+      - name: Build parent project
+        run: mvn clean install -DskipTests=true -q
+
+      - name: Start microservices (docker-compose)
+        run: |
+          docker-compose up -d
+          sleep 30
+          docker-compose ps
+
+      - name: Wait for services to be ready
+        run: |
+          timeout 300 bash -c 'until curl -f http://localhost:8080/actuator/health 2>/dev/null; do sleep 5; done'
+          timeout 300 bash -c 'until curl -f http://localhost:8700/actuator/health 2>/dev/null; do sleep 5; done'
+          timeout 300 bash -c 'until curl -f http://localhost:8500/actuator/health 2>/dev/null; do sleep 5; done'
+          timeout 300 bash -c 'until curl -f http://localhost:8300/actuator/health 2>/dev/null; do sleep 5; done'
+          timeout 300 bash -c 'until curl -f http://localhost:8400/actuator/health 2>/dev/null; do sleep 5; done'
+          timeout 300 bash -c 'until curl -f http://localhost:8600/actuator/health 2>/dev/null; do sleep 5; done'
+          timeout 300 bash -c 'until curl -f http://localhost:8800/actuator/health 2>/dev/null; do sleep 5; done'
+          timeout 300 bash -c 'until curl -f http://localhost:8900/actuator/health 2>/dev/null; do sleep 5; done'
+
+      - name: Run E2E Flow Tests
+        run: mvn test -Dgroups="e2e-flows" -f e2e-tests/pom.xml
+        continue-on-error: true
+
+      - name: Run E2E Integration Tests
+        run: mvn test -Dgroups="e2e-integration" -f e2e-tests/pom.xml
+        continue-on-error: true
+
+      - name: Run E2E Resilience Tests
+        run: mvn test -Dgroups="e2e-resilience" -f e2e-tests/pom.xml
+        continue-on-error: true
+
+      - name: Generate Allure Report
+        if: always()
+        run: |
+          mvn allure:report -f e2e-tests/pom.xml
+        continue-on-error: true
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-results
+          path: e2e-tests/target/allure-results
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-reports
+          path: e2e-tests/target/surefire-reports
+
+      - name: Publish Test Results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: 'e2e-tests/target/surefire-reports/TEST-*.xml'
+          check_name: 'E2E Test Results'
+
+      - name: Stop microservices
+        if: always()
+        run: docker-compose down
+
+      - name: Show service logs on failure
+        if: failure()
+        run: docker-compose logs
+
+env:
+  MAVEN_OPTS: -Xmx1024m
