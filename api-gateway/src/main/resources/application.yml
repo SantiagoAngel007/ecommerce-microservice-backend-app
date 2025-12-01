@@ -41,10 +41,20 @@ spring:
         uri: lb://PAYMENT-SERVICE
         predicates:
         - Path=/payment-service/**
+        filters:
+          - name: CircuitBreaker
+            args:
+              name: paymentCircuit
+              fallbackUri: forward:/fallback/payment
       - id: PRODUCT-SERVICE
         uri: lb://PRODUCT-SERVICE
         predicates:
         - Path=/product-service/**
+        filters:
+          - name: CircuitBreaker
+            args:
+              name: productCircuit
+              fallbackUri: forward:/fallback/product
       - id: SHIPPING-SERVICE
         uri: lb://SHIPPING-SERVICE
         predicates:
@@ -62,19 +72,19 @@ spring:
         predicates:
         - Path=/app/**
 
-resilience4j:
-  circuitbreaker:
-    instances:
-      apiGateway:
-        register-health-indicator: true
-        event-consumer-buffer-size: 10
-        automatic-transition-from-open-to-half-open-enabled: true
-        failure-rate-threshold: 50
-        minimum-number-of-calls: 5
-        permitted-number-of-calls-in-half-open-state: 3
-        sliding-window-size: 10
-        wait-duration-in-open-state: 5s
-        sliding-window-type: COUNT_BASED
+# resilience4j:
+#   circuitbreaker:
+#     instances:
+#       apiGateway:
+#         register-health-indicator: true
+#         event-consumer-buffer-size: 10
+#         automatic-transition-from-open-to-half-open-enabled: true
+#         failure-rate-threshold: 50
+#         minimum-number-of-calls: 5
+#         permitted-number-of-calls-in-half-open-state: 3
+#         sliding-window-size: 10
+#         wait-duration-in-open-state: 5s
+#         sliding-window-type: COUNT_BASED
 
 management:
   health:
