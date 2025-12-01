@@ -7,6 +7,9 @@ management:
     web:
       exposure:
         include: "*"
+  endpoint:
+    health:
+      show-details: always
 
 spring:
   datasource:
@@ -54,3 +57,6 @@ logging:
             jpa: DEBUG
             orm: DEBUG
 
+feature:
+  product:
+    count-enabled: false
