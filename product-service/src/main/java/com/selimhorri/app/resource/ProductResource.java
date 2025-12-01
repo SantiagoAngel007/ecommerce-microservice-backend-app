@@ -16,7 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.selimhorri.app.dto.ProductDto;
 import com.selimhorri.app.dto.response.collection.DtoCollectionResponse;
+import com.selimhorri.app.feature.FeatureToggleService;
 import com.selimhorri.app.service.ProductService;
+
+import org.springframework.http.HttpStatus;
+
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ProductResource {
 	
 	private final ProductService productService;
+	private final FeatureToggleService toggleService;
 	
 	@GetMapping
 	public ResponseEntity<DtoCollectionResponse<ProductDto>> findAll() {
@@ -81,7 +86,16 @@ public class ProductResource {
 		return ResponseEntity.ok(true);
 	}
 	
-	
+    @GetMapping("/count")
+    public ResponseEntity<?> getProductCount() {
+        if (!toggleService.isProductCountEnabled()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Feature 'product count' deshabilitada");
+        }
+
+        long total = productService.countAll();
+        return ResponseEntity.ok(total);
+    }
 	
 }
 
