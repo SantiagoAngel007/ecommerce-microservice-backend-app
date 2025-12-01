@@ -54,3 +54,6 @@ logging:
             jpa: DEBUG
             orm: DEBUG
 
+feature:
+  product:
+    count-enabled: false

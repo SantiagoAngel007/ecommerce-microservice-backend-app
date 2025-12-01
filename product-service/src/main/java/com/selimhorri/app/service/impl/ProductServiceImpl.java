@@ -70,7 +70,10 @@ public class ProductServiceImpl implements ProductService {
 				.map(this.findById(productId)));
 	}
 	
-	
+	@Override
+	public long countAll() {
+		return productRepository.count(); // si usas Spring Data JPA, count() existe
+	}
 	
 }
 
